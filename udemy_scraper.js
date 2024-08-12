@@ -12,7 +12,26 @@ async function scrapeCourses(url) {
                 .map(a => a.href);
   });
 
-  console.log(courseLinks.length)
+  for (const link of courseLinks) {
+    await page.goto(link);
+
+    const courseData = await page.evaluate(() => {
+      const ratingText = document.querySelector('.ud-heading-sm.star-rating-module--rating-number--2-qA2');
+      const rating = ratingText ? parseFloat(ratingText.textContent.replace(',', '.')) : null;
+
+      const enrollmentText = document.querySelector('.enrollment');
+      const participants = enrollmentText ? parseInt(enrollmentText.textContent.split(' ')[0]) : null;
+
+      return {
+        rating,
+        participants,
+      };
+    });
+
+    console.log(`Course URL: ${link}`);
+    console.log(`Stars: ${courseData.rating}`);
+    console.log(`Participants: ${courseData.participants}`);
+  }
 
   await browser.close();
 }
