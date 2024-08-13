@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const XLSX = require('xlsx');
 
 // Check if the WebSocket Debugger URL is provided as an argument
 const browserWSEndpoint = process.argv[2];
@@ -8,6 +9,37 @@ if (!browserWSEndpoint) {
 }
 
 const url = "https://answersq.com/udemy-paid-courses-for-free-with-certificate/";
+
+function generateXLS(data) {
+  // Parse data without the heading row
+  const worksheet = XLSX.utils.json_to_sheet(data, { origin: 'A2', skipHeader: true });
+
+  // Header row
+  const headers = [['URL', 'Stars', 'Ratings', 'Participants']];
+  XLSX.utils.sheet_add_aoa(worksheet, headers, { origin: 'A1' });
+
+  // Refactor first row as url links
+  data.forEach((row, rowIndex) => {
+    worksheet[XLSX.utils.encode_cell({ r: rowIndex + 1, c: 0 })] = {
+      t: 's',
+      v: 'Go to course',
+      l: { Target: row.url}
+    };
+  });
+
+  // Adjust column widths
+  worksheet['!cols'] = [
+    { width: 20 },
+    { width: 10 },
+    { width: 15 },
+    { width: 20 }
+  ];
+
+  // Create and export the workbook
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Udemy Courses");
+  XLSX.writeFile(workbook, "courses.xlsx");
+}
 
 async function scrapeCourses(url) {
   // Connect to the existing browser instance via the WebSocket endpoint
@@ -22,7 +54,7 @@ async function scrapeCourses(url) {
   // Extract all course links from the website
   const courseLinks = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('ul.wp-block-list li a'))
-                .slice(0, 10).map(a => a.href);
+                .slice(0, 5).map(a => a.href);
   });
 
   let data = [];
@@ -59,7 +91,8 @@ async function scrapeCourses(url) {
   }
 
   data.sort((a, b) => b.ratings - a.ratings || b.stars - a.stars);
-  console.log(data);
+
+  generateXLS(data);
 
   // Close the page and disconnect from the browser
   await page.close();
