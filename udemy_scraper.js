@@ -11,25 +11,24 @@ if (!browserWSEndpoint) {
 const url = "https://answersq.com/udemy-paid-courses-for-free-with-certificate/";
 
 function generateXLS(data) {
-  // Parse data without the heading row
-  const worksheet = XLSX.utils.json_to_sheet(data, { origin: 'A2', skipHeader: true });
+  // Generate the final table data
+  const tableData = data.map(item => ({
+    course: { t: 's', v: item.title, l: { Target: item.url, Tooltip: 'Go to course page' } },
+    stars: item.stars,
+    ratings: item.ratings,
+    participants: item.participants
+  }));
 
-  // Header row
-  const headers = [['URL', 'Stars', 'Ratings', 'Participants']];
-  XLSX.utils.sheet_add_aoa(worksheet, headers, { origin: 'A1' });
+  // Generate the sheet with the final table data excluding the headers
+  const worksheet = XLSX.utils.json_to_sheet(tableData, { origin: 'A2', skipHeader: true });
 
-  // Refactor first row as url links
-  data.forEach((row, rowIndex) => {
-    worksheet[XLSX.utils.encode_cell({ r: rowIndex + 1, c: 0 })] = {
-      t: 's',
-      v: 'Go to course',
-      l: { Target: row.url}
-    };
-  });
+  // Add headers manually
+  const headers = ['Title', 'Stars', 'Ratings', 'Participants'];
+  XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: 'A1' });
 
   // Adjust column widths
   worksheet['!cols'] = [
-    { width: 20 },
+    { width: 60 },
     { width: 10 },
     { width: 15 },
     { width: 20 }
@@ -54,7 +53,7 @@ async function scrapeCourses(url) {
   // Extract all course links from the website
   const courseLinks = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('ul.wp-block-list li a'))
-                .slice(0, 5).map(a => a.href);
+                .map(a => a.href);
   });
 
   let data = [];
@@ -64,6 +63,9 @@ async function scrapeCourses(url) {
     await page.goto(link);
 
     const courseData = await page.evaluate(() => {
+      // Extract the course's title
+      const title = document.querySelector('.ud-heading-xl.clp-lead__title.clp-lead__title--small').textContent.trim();
+
       // Extract the course's star rating
       const ratingText = document.querySelector('.ud-heading-sm.star-rating-module--rating-number--2-qA2');
       const starRating = ratingText ? parseFloat(ratingText.textContent.replace(',', '.')) : null;
@@ -77,6 +79,7 @@ async function scrapeCourses(url) {
       const numberOfParticipants = enrollmentText ? parseInt(enrollmentText.textContent.split(' ')[0].replace(',', '')) : null;
 
       return {
+        title,
         starRating,
         numberOfRatings,
         numberOfParticipants,
@@ -84,6 +87,7 @@ async function scrapeCourses(url) {
     });
 
     data.push({ url: link,
+                title: courseData.title,
                 stars: courseData.starRating,
                 ratings: courseData.numberOfRatings,
                 participants: courseData.numberOfParticipants});
