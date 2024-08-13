@@ -22,8 +22,10 @@ async function scrapeCourses(url) {
   // Extract all course links from the website
   const courseLinks = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('ul.wp-block-list li a'))
-                .map(a => a.href);
+                .slice(0, 10).map(a => a.href);
   });
+
+  let data = [];
 
   // Iterate over each course link and scrape course data
   for (const link of courseLinks) {
@@ -32,22 +34,32 @@ async function scrapeCourses(url) {
     const courseData = await page.evaluate(() => {
       // Extract the course's star rating
       const ratingText = document.querySelector('.ud-heading-sm.star-rating-module--rating-number--2-qA2');
-      const rating = ratingText ? parseFloat(ratingText.textContent.replace(',', '.')) : null;
+      const starRating = ratingText ? parseFloat(ratingText.textContent.replace(',', '.')) : null;
+
+      // Extract the number of ratings
+      const numberOfRatingsText = document.querySelectorAll('a.ud-btn.ud-btn-large.ud-btn-link.ud-heading-md.ud-text-sm.styles--rating-wrapper--YkK4n span');
+      const numberOfRatings = numberOfRatingsText[3] ? parseInt(numberOfRatingsText[3].textContent.replace('(', '').split(' ')[0].replace('.', '')) : null;
 
       // Extract the number of enrolled participants
       const enrollmentText = document.querySelector('.enrollment');
-      const participants = enrollmentText ? parseInt(enrollmentText.textContent.split(' ')[0]) : null;
+      const numberOfParticipants = enrollmentText ? parseInt(enrollmentText.textContent.split(' ')[0].replace(',', '')) : null;
 
       return {
-        rating,
-        participants,
+        starRating,
+        numberOfRatings,
+        numberOfParticipants,
       };
     });
 
-    console.log(`Course URL: ${link}`);
-    console.log(`Stars: ${courseData.rating}`);
-    console.log(`Participants: ${courseData.participants}`);
+    data.push({ url: link,
+                stars: courseData.starRating,
+                ratings: courseData.numberOfRatings,
+                participants: courseData.numberOfParticipants});
+
   }
+
+  data.sort((a, b) => b.ratings - a.ratings || b.stars - a.stars);
+  console.log(data);
 
   // Close the page and disconnect from the browser
   await page.close();
