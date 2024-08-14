@@ -64,19 +64,20 @@ async function scrapeCourses(url) {
 
     const courseData = await page.evaluate(() => {
       // Extract the course's title
-      const title = document.querySelector('.ud-heading-xl.clp-lead__title.clp-lead__title--small').textContent.trim();
+      const titleElement = document.querySelector('.ud-heading-xl.clp-lead__title.clp-lead__title--small');
+      const title = titleElement ? titleElement.textContent.trim() : null;
 
       // Extract the course's star rating
-      const ratingText = document.querySelector('.ud-heading-sm.star-rating-module--rating-number--2-qA2');
-      const starRating = ratingText ? parseFloat(ratingText.textContent.replace(',', '.')) : null;
+      const ratingElement = document.querySelector('.ud-heading-sm.star-rating-module--rating-number--2-qA2');
+      const starRating = ratingElement ? parseFloat(ratingElement.textContent.replace(',', '.')) : null;
 
       // Extract the number of ratings
-      const numberOfRatingsText = document.querySelectorAll('a.ud-btn.ud-btn-large.ud-btn-link.ud-heading-md.ud-text-sm.styles--rating-wrapper--YkK4n span');
-      const numberOfRatings = numberOfRatingsText[3] ? parseInt(numberOfRatingsText[3].textContent.replace('(', '').split(' ')[0].replace('.', '')) : null;
+      const numberOfRatingsElement = document.querySelectorAll('a.ud-btn.ud-btn-large.ud-btn-link.ud-heading-md.ud-text-sm.styles--rating-wrapper--YkK4n span');
+      const numberOfRatings = numberOfRatingsElement[3] ? parseInt(numberOfRatingsElement[3].textContent.replace('(', '').split(' ')[0].replace('.', '')) : null;
 
       // Extract the number of enrolled participants
-      const enrollmentText = document.querySelector('.enrollment');
-      const numberOfParticipants = enrollmentText ? parseInt(enrollmentText.textContent.split(' ')[0].replace(',', '')) : null;
+      const enrollmentElement = document.querySelector('.enrollment');
+      const numberOfParticipants = enrollmentElement ? parseInt(enrollmentElement.textContent.split(' ')[0].replace(',', '')) : null;
 
       return {
         title,
@@ -86,16 +87,17 @@ async function scrapeCourses(url) {
       };
     });
 
-    data.push({ url: link,
-                title: courseData.title,
-                stars: courseData.starRating,
-                ratings: courseData.numberOfRatings,
-                participants: courseData.numberOfParticipants});
-
+    // Append the course information into the data structure
+    if (Object.values(courseData).every(field => field != null)) {
+      data.push({ url: link, title: courseData.title, stars: courseData.starRating,
+                  ratings: courseData.numberOfRatings, participants: courseData.numberOfParticipants });
+    }
   }
 
-  data.sort((a, b) => b.ratings - a.ratings || b.stars - a.stars);
+  // Sort the data based on rating and number of ratings
+  data.sort((courseA, courseB) => courseB.ratings - courseA.ratings || courseB.stars - courseA.stars);
 
+  // Generate the XLSX file containing the data
   generateXLS(data);
 
   // Close the page and disconnect from the browser
