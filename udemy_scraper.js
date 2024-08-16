@@ -37,7 +37,11 @@ function generateXLS(data) {
   // Create and export the workbook
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Udemy Courses");
-  XLSX.writeFile(workbook, "courses.xlsx");
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const date = new Date();
+
+  XLSX.writeFile(workbook, "courses-" + months[date.getMonth()] + date.getDate() + ".xlsx");
 }
 
 async function scrapeCourses(url) {
@@ -52,7 +56,7 @@ async function scrapeCourses(url) {
 
   // Extract all course links from the website
   const courseLinks = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('ul.wp-block-list li a'))
+    return Array.from(document.querySelector('ul.wp-block-list').querySelectorAll('li a'))
                 .map(a => a.href);
   });
 
